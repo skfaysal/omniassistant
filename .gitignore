@@ -2,7 +2,7 @@
 .streamlit/secrets.toml
 checkpoints.db
 checkpoints.db-*
-
+docs/
 # Langgraph
 .langgraph_api/
 
