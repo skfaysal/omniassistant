@@ -1,0 +1,10 @@
+[project]
+name = "streamlit-ui"
+version = "0.1.0"
+description = "Streamlit chatbot UI for the LangGraph agent server"
+requires-python = ">=3.11"
+dependencies = [
+    "streamlit>=1.41.0",
+    "requests>=2.32.0",
+    "python-dotenv>=1.0.1",
+]

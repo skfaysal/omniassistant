@@ -1,0 +1,19 @@
+# Keycloak authorization server — the external IdP from the MCP authorization
+# tutorial (https://modelcontextprotocol.io/docs/tutorials/security/authorization).
+#
+# Equivalent to the tutorial's:
+#   docker run -p 127.0.0.1:8080:8080 \
+#     -e KC_BOOTSTRAP_ADMIN_USERNAME=admin -e KC_BOOTSTRAP_ADMIN_PASSWORD=admin \
+#     quay.io/keycloak/keycloak start-dev
+#
+# NOT for production — see "Configuring Keycloak for production" in the
+# Keycloak docs (persistent DB, TLS, real admin credentials, no start-dev).
+services:
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.3
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+    ports:
+      - "127.0.0.1:8080:8080"
