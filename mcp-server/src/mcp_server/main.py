@@ -7,7 +7,7 @@ Wires together every layer of the server:
   metrics/health)                  ─┘    streamable-HTTP transport
                                           (SDK bearer-auth middleware
                                            + RFC 9728 metadata routes
-                                           + stateless calculator tools)
+                                           + stateless tools bound at startup)
 
 Authorization is delegated to an external Keycloak server (see
 `keycloak/docker-compose.yml`); the mounted FastMCP app validates tokens via
@@ -41,7 +41,7 @@ from .observability.tracing import setup_tracing
 from .secrets_manager import secrets_manager
 from .server import mcp
 from .settings import get_settings
-from . import tools  # noqa: F401 — importing registers every tool module on `mcp`
+from .tools import register_all
 
 logger = logging.getLogger(__name__)
 
@@ -59,6 +59,10 @@ def create_app() -> FastAPI:
     # Startup validation — fail fast if required configuration is missing.
     # The introspection client secret is a real secret (never in source code).
     secrets_manager.validate_startup(["MCP_OAUTH_CLIENT_SECRET"])
+
+    # Discover every module in `tools/` and bind its declared tools to the
+    # server. Tool modules never import `mcp` themselves — see tools/registry.py.
+    register_all(mcp)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):

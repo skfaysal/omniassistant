@@ -13,8 +13,9 @@ server exactly like the MCP authorization tutorial's Python example
     - enforces `required_scopes` on the `/mcp` endpoint (403 otherwise),
     - exposes the validated identity to tools via the auth context.
 
-Lives in its own module so any number of tool modules can register against it
-(see `tools/__init__.py`). Transport choices:
+Lives in its own module so the application can bind any number of tools to it
+at startup (`tools.register_all(mcp)` — tool modules declare themselves to the
+registry rather than importing this instance). Transport choices:
 
 * `stateless_http=True` — every request is self-contained; no sticky sessions,
   so any horizontally-scaled replica behind a load balancer can serve any
@@ -40,8 +41,11 @@ _token_verifier = IntrospectionTokenVerifier(
 )
 
 mcp = FastMCP(
-    name="calculator",
-    instructions="A secure remote calculator. Use `calculate` for arithmetic.",
+    name="omniassistant",
+    instructions=(
+        "A secure remote MCP server. Call `tools/list` to discover the "
+        "available tools; each one states what it does and what it needs."
+    ),
     stateless_http=True,
     json_response=True,
     token_verifier=_token_verifier,

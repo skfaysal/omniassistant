@@ -6,10 +6,13 @@ Security and scalability patterns demonstrated at the tool layer:
   context is attached to every invocation's audit log, so each action is
   attributable to the authenticated user ("scope every operation to the
   current user").
+* **Least privilege** — the tool declares the scope it needs; the registry
+  denies callers whose token does not carry it.
 * **Input validation** — operands must be finite and bounded; divide-by-zero
   is rejected. Malformed input is a client error, never a crash.
-* **Observability** — every invocation logs a structured `tool_invoked`
-  security event and increments the `mcp_tool_calls_total` metric.
+* **Observability** — the registry records a `tool_invoked` security event and
+  the `mcp_tool_calls_total` metric for every invocation, so this module holds
+  business logic only.
 """
 
 from __future__ import annotations
@@ -18,9 +21,7 @@ import logging
 import math
 
 from ..auth.context import get_current_user
-from ..observability.metrics import TOOL_CALLS
-from ..observability.security_events import log_security_event
-from ..server import mcp
+from .registry import tool
 
 logger = logging.getLogger(__name__)
 
@@ -36,35 +37,28 @@ def _validate_operand(value: float, name: str) -> None:
         raise ValueError(f"{name} must be within ±{MAX_OPERAND:g}")
 
 
-@mcp.tool()
+@tool(required_scope="calculator:use")
 def calculate(operation: str, a: float, b: float) -> str:
     """Perform basic arithmetic. `operation` is one of: add, subtract, multiply, divide."""
     user = get_current_user()  # identity from the introspected token (SDK auth context)
-    try:
-        _validate_operand(a, "a")
-        _validate_operand(b, "b")
-        match operation:
-            case "add":
-                result = a + b
-            case "subtract":
-                result = a - b
-            case "multiply":
-                result = a * b
-            case "divide":
-                if b == 0:
-                    raise ValueError("Division by zero is not allowed")
-                result = a / b
-            case _:
-                raise ValueError(
-                    f"Unknown operation '{operation}'. "
-                    "Use add, subtract, multiply or divide."
-                )
-    except ValueError:
-        TOOL_CALLS.labels(tool="calculate", outcome="invalid_input").inc()
-        log_security_event("tool_invoked", tool="calculate", sub=user.sub, outcome="invalid_input")
-        raise
+    _validate_operand(a, "a")
+    _validate_operand(b, "b")
+    match operation:
+        case "add":
+            result = a + b
+        case "subtract":
+            result = a - b
+        case "multiply":
+            result = a * b
+        case "divide":
+            if b == 0:
+                raise ValueError("Division by zero is not allowed")
+            result = a / b
+        case _:
+            raise ValueError(
+                f"Unknown operation '{operation}'. "
+                "Use add, subtract, multiply or divide."
+            )
 
-    TOOL_CALLS.labels(tool="calculate", outcome="success").inc()
-    log_security_event("tool_invoked", tool="calculate", sub=user.sub, outcome="success")
     logger.info("Calculation performed", extra={"sub": user.sub, "operation": operation})
     return f"{a} {operation} {b} = {result}"
